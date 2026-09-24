@@ -1,0 +1,10 @@
+# From DDPM's model tables; not measured.
+
+[panel]
+models = ["DELL U4919DW", "DELL U4919DWA"]
+
+[[code]]
+vcp = 0xE5
+name = "pxp-action"
+provenance = "inferred"
+note = "After a 0xF010 swap DDPM waits 100 ms and writes 0xF000 as a commit on this model."

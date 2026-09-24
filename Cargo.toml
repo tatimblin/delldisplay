@@ -1,0 +1,14 @@
+[workspace]
+resolver = "2"
+members = ["crates/*"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+authors = ["Tristan Timblin"]
+rust-version = "1.87"
+readme = "README.md"
+keywords = ["ddc", "ddc-ci", "monitor", "dell", "mccs"]
+categories = ["command-line-utilities", "hardware-support"]
+repository = "https://github.com/tatimblin/delldisplay"

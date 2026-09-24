@@ -1,0 +1,144 @@
+# Standard MCCS 2.2 codes. Lookups fall back to these when the active profile
+# doesn't list a code. Spec facts only; anything Dell-specific goes in a profile.
+
+[[code]]
+vcp = 0x02
+name = "new-control-value"
+provenance = "spec"
+note = "Set to 0x02 by the panel when a control changes; write 0x01 to acknowledge."
+
+[[code]]
+vcp = 0x04
+name = "restore-factory"
+provenance = "spec"
+note = "Write any non-zero value to restore every factory default."
+
+[[code]]
+vcp = 0x05
+name = "restore-brightness"
+provenance = "spec"
+note = "Write any non-zero value to restore factory brightness and contrast."
+
+[[code]]
+vcp = 0x08
+name = "restore-color"
+provenance = "spec"
+note = "Write any non-zero value to restore factory colour settings."
+
+[[code]]
+vcp = 0x10
+name = "brightness"
+provenance = "spec"
+
+[[code]]
+vcp = 0x12
+name = "contrast"
+provenance = "spec"
+
+[[code]]
+vcp = 0x14
+name = "color-preset"
+provenance = "spec"
+values = "0x01=srgb, 0x02=native, 0x03=4000k, 0x04=5000k, 0x05=6500k, 0x06=7500k, 0x07=8200k, 0x08=9300k, 0x09=10000k, 0x0A=11500k, 0x0B=user1, 0x0C=user2, 0x0D=user3"
+
+[[code]]
+vcp = 0x16
+name = "gain-red"
+provenance = "spec"
+
+[[code]]
+vcp = 0x18
+name = "gain-green"
+provenance = "spec"
+
+[[code]]
+vcp = 0x1A
+name = "gain-blue"
+provenance = "spec"
+
+[[code]]
+vcp = 0x52
+name = "active-control"
+provenance = "spec"
+note = "Reports the code of the last changed control, 0x00 when the queue is empty."
+
+[[code]]
+vcp = 0x60
+name = "input"
+provenance = "spec"
+values = "0x01=vga1, 0x02=vga2, 0x03=dvi1, 0x04=dvi2, 0x05=composite1, 0x06=composite2, 0x07=svideo1, 0x08=svideo2, 0x09=tuner1, 0x0A=tuner2, 0x0B=tuner3, 0x0C=component1, 0x0D=component2, 0x0E=component3, 0x0F=dp1, 0x10=dp2, 0x11=hdmi1, 0x12=hdmi2"
+
+[[code]]
+vcp = 0x62
+name = "volume"
+provenance = "spec"
+
+[[code]]
+vcp = 0x8D
+name = "audio-mute"
+provenance = "spec"
+values = "0x01=muted, 0x02=unmuted"
+
+[[code]]
+vcp = 0xAC
+name = "h-frequency"
+provenance = "spec"
+
+[[code]]
+vcp = 0xAE
+name = "v-frequency"
+provenance = "spec"
+note = "Vertical frequency in units of 0.01 Hz."
+
+[[code]]
+vcp = 0xB2
+name = "subpixel-layout"
+provenance = "spec"
+
+[[code]]
+vcp = 0xB6
+name = "display-technology"
+provenance = "spec"
+
+[[code]]
+vcp = 0xC6
+name = "app-enable-key"
+provenance = "spec"
+
+[[code]]
+vcp = 0xC8
+name = "display-controller"
+provenance = "spec"
+note = "Low byte is the scaler vendor, high bytes a vendor-defined chip id."
+
+[[code]]
+vcp = 0xC9
+name = "firmware-level"
+provenance = "spec"
+
+[[code]]
+vcp = 0xCA
+name = "osd-lock"
+provenance = "spec"
+
+[[code]]
+vcp = 0xCC
+name = "osd-language"
+provenance = "spec"
+values = "0x01=chinese-traditional, 0x02=english, 0x03=french, 0x04=german, 0x05=italian, 0x06=japanese, 0x07=korean, 0x08=portuguese, 0x09=russian, 0x0A=spanish, 0x0B=swedish, 0x0C=turkish, 0x0D=chinese-simplified, 0x0E=portuguese-brazil"
+
+[[code]]
+vcp = 0xD6
+name = "power-mode"
+provenance = "spec"
+values = "0x01=on, 0x02=standby, 0x03=suspend, 0x04=off-soft, 0x05=off"
+
+[[code]]
+vcp = 0xDC
+name = "picture-mode"
+provenance = "spec"
+
+[[code]]
+vcp = 0xDF
+name = "mccs-version"
+provenance = "spec"

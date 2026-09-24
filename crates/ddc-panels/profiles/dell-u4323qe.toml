@@ -1,0 +1,264 @@
+# The panel this project is measured on.
+
+[panel]
+models = ["DELL U4323QE"]
+mccs = "2.1"
+default = true
+
+[quirks]
+# Single frames get a Null Message reply.
+double_write = true
+# Enum codes report as continuous.
+type_byte_reliable = false
+# DDC refusal byte; the USB-HID tunnel uses 0xFE.
+refusal_result = 0x01
+enumerated = [0x14, 0x60, 0xCC, 0xD6, 0xDC, 0xE2, 0xE9]
+slow_write_codes = [0xE0, 0xE1, 0xD6]
+slow_write_ms = 150
+normal_write_ms = 60
+
+[[code]]
+vcp = 0x02
+name = "new-control-value"
+provenance = "unknown"
+note = "Reads 0x02 all the time and ignores OSD changes and the 0x01 acknowledge, so it doesn't work as MCCS describes."
+
+[[code]]
+vcp = 0x04
+name = "restore-factory"
+provenance = "spec"
+note = "Write 0x01 to reset everything including language and presets; never tested here."
+
+[[code]]
+vcp = 0x05
+name = "restore-brightness"
+provenance = "spec"
+note = "Write 0x01 to reset 0x10 and 0x12 only."
+
+[[code]]
+vcp = 0x08
+name = "restore-color"
+provenance = "spec"
+note = "Write 0x01 to reset colour settings only."
+
+[[code]]
+vcp = 0x10
+name = "brightness"
+provenance = "observed"
+note = "0-100; writes verified by reading back."
+
+[[code]]
+vcp = 0x12
+name = "contrast"
+provenance = "observed"
+note = "0-100."
+
+[[code]]
+vcp = 0x14
+name = "color-preset"
+provenance = "inferred"
+values = "0x04=5000k, 0x05=6500k, 0x06=7500k, 0x08=9300k, 0x09=10000k, 0x0B=5700k, 0x0C=custom"
+note = "Writes verified; value names are Dell's, not checked against the OSD."
+
+[[code]]
+vcp = 0x16
+name = "gain-red"
+provenance = "inferred"
+note = "Reads 100 of 100; never written, and DDPM never uses it."
+
+[[code]]
+vcp = 0x18
+name = "gain-green"
+provenance = "inferred"
+note = "Reads 100 of 100; never written, and DDPM never uses it."
+
+[[code]]
+vcp = 0x1A
+name = "gain-blue"
+provenance = "inferred"
+note = "Reads 100 of 100; never written, and DDPM never uses it."
+
+[[code]]
+vcp = 0x52
+name = "active-control"
+provenance = "unknown"
+note = "Doesn't report OSD changes here and drifts with our own DDC traffic, so poll and diff instead."
+
+[[code]]
+vcp = 0x60
+name = "input"
+provenance = "observed"
+values = "0x0F=dp1, 0x11=hdmi1, 0x12=hdmi2, 0x13=dp2, 0x1B=usb-c"
+note = "Reads are unstable while Auto Select hunts empty inputs; a write that collides with a PxP sub-source is accepted and leaves 0xE8 alone."
+
+[[code]]
+vcp = 0x62
+name = "volume"
+provenance = "spec"
+note = "0-100; reads match the OSD Volume. Writes not checked by ear."
+
+[[code]]
+vcp = 0x63
+name = "audio-source"
+provenance = "inferred"
+note = "Refused on this panel with result 0x01."
+
+[[code]]
+vcp = 0x8D
+name = "speaker"
+provenance = "observed"
+values = "0x00=speaker-off, 0x01=speaker-on"
+note = "OSD Speaker switch: 0 off, 1 on. Not MCCS mute."
+
+[[code]]
+vcp = 0xAC
+name = "h-frequency"
+provenance = "unknown"
+note = "Reads 0x00B4 with max 2, which doesn't fit the MCCS encoding."
+
+[[code]]
+vcp = 0xAE
+name = "v-frequency"
+provenance = "unknown"
+note = "Reads 0x006F with max 0, which doesn't fit the MCCS encoding."
+
+[[code]]
+vcp = 0xB2
+name = "subpixel-layout"
+provenance = "observed"
+note = "Reads 0x01, RGB vertical stripe."
+
+[[code]]
+vcp = 0xB6
+name = "display-technology"
+provenance = "observed"
+note = "Reads 0x03, LCD active matrix."
+
+[[code]]
+vcp = 0xC6
+name = "app-enable-key"
+provenance = "observed"
+note = "Reads 0xCC."
+
+[[code]]
+vcp = 0xC8
+name = "display-controller"
+provenance = "observed"
+note = "Reads 0x05; DDPM reads it as a group with 0xFD and 0xC9."
+
+[[code]]
+vcp = 0xC9
+name = "firmware-level"
+provenance = "observed"
+note = "Reads 0x01."
+
+[[code]]
+vcp = 0xCA
+name = "osd-lock"
+provenance = "inferred"
+note = "Not advertised in this panel's capability string."
+
+[[code]]
+vcp = 0xCC
+name = "osd-language"
+provenance = "inferred"
+values = "0x02=english, 0x03=french, 0x04=german, 0x06=japanese, 0x09=russian, 0x0A=spanish, 0x0D=chinese-simplified, 0x0E=portuguese-brazil"
+note = "The eight languages the panel advertises; only english is checked against the OSD."
+
+[[code]]
+vcp = 0xD6
+name = "power-mode"
+provenance = "observed"
+values = "0x01=on, 0x04=standby, 0x05=off"
+
+[[code]]
+vcp = 0xDC
+name = "picture-mode"
+provenance = "observed"
+values = "0x00=standard"
+note = "Only 0x00 is advertised, and other values report success but don't change it, so verify writes by reading back."
+
+[[code]]
+vcp = 0xDF
+name = "mccs-version"
+provenance = "observed"
+
+[[code]]
+vcp = 0xE0
+name = "powernap-dim"
+provenance = "observed"
+note = "Boolean; needs the longer settle delay around the write."
+
+[[code]]
+vcp = 0xE1
+name = "powernap-sleep"
+provenance = "observed"
+note = "Boolean; needs the longer settle delay around the write."
+
+[[code]]
+vcp = 0xE2
+name = "preset-mode"
+provenance = "unknown"
+values = "0x00=standard, 0x0C=5000k, 0x0D=5700k, 0x0F=6500k, 0x10=7500k, 0x11=9300k, 0x13=10000k, 0x14=custom"
+note = "Reads 0x00 while 0x14 reads 0x05; DDPM treats it as a preset index, and how it relates to 0x14 here is unknown."
+
+[[code]]
+vcp = 0xE5
+name = "pxp-action"
+provenance = "observed"
+note = "Only swap works here: 0xF010 swaps main and sub1 and needs the double write, while 0x0002 zoom and 0x0003 underscan do nothing visible."
+
+[[code]]
+vcp = 0xE7
+name = "usb-kvm"
+provenance = "observed"
+note = "0xFF00 toggles the USB upstream; four 2-bit fields at bits 6-13 index the 0xEE port list, and which input owns which field is unresolved."
+
+[[code]]
+vcp = 0xE8
+name = "pip-sub-source"
+provenance = "observed"
+note = "Three 5-bit input codes packed as sub1 | sub2<<5 | sub3<<10; a sub window may show the same source as main."
+
+[[code]]
+vcp = 0xE9
+name = "pip"
+provenance = "observed"
+values = "0x00=off, 0x21=pip-small, 0x22=pip-large, 0x24=pbp-2up-self-left, 0x2F=pbp-vsplit-self-top, 0x31=pbp-3up-left-stack, 0x32=pbp-l2r1, 0x33=pbp-vstack-self-top, 0x34=pbp-3up, 0x35=pbp-t2b1, 0x41=pbp-quad"
+note = "Sub windows are numbered clockwise from main; writing 0x01 or 0x02 steps PiP size or corner, but from off they alias 0x24 and 0x32."
+
+[[code]]
+vcp = 0xEE
+name = "usb-port-inventory"
+provenance = "observed"
+note = "Reads 0xBA98, four nibbles of upstream port codes; read-only."
+
+[[code]]
+vcp = 0xEF
+name = "unknown-ef"
+provenance = "unknown"
+note = "Advertised; DDPM never reads or writes it."
+
+[[code]]
+vcp = 0xF1
+name = "unknown-f1"
+provenance = "unknown"
+note = "Reads 0xC12B; DDPM checks bits 14 and 5, but neither gates anything here, so don't gate features on it."
+
+[[code]]
+vcp = 0xF2
+name = "status"
+provenance = "observed"
+note = "Bit 7 means busy, so gate writes on it; reads 0x0000 when idle."
+
+[[code]]
+vcp = 0xFD
+name = "firmware-byte"
+provenance = "observed"
+note = "Reads 0x74; Dell-private, read between 0xC8 and 0xC9."
+
+[[code]]
+vcp = 0xFE
+name = "unknown-fe"
+provenance = "unknown"
+note = "Advertised with no DDPM access and next to the firmware area, so don't blind-write it."

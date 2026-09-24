@@ -1,0 +1,29 @@
+# From DDPM's model tables; not measured.
+
+[panel]
+models = ["DELL UP2720Q", "DELL UP2720QA"]
+
+[[code]]
+vcp = 0x10
+name = "brightness"
+provenance = "inferred"
+note = "A fraction of the 0x10 max with a raw floor of 45, not 0-100, so read the max first."
+
+[[code]]
+vcp = 0xE2
+name = "preset-mode"
+provenance = "inferred"
+values = "0x0B=srgb-d65-l250, 0x1A=bt709, 0x1B=dci-p3, 0x1C=bt2020, 0x2A=adobergb-d65-g22-l250, 0x2B=adobergb-d50-g22-l250, 0x2C=custom1, 0x2D=custom2, 0x2E=custom3"
+note = "DDPM's calibrated UP27 preset table; the offered set comes from E2( ) in the capability string."
+
+[[code]]
+vcp = 0xE5
+name = "pxp-action"
+provenance = "inferred"
+note = "After a 0xF010 swap DDPM waits 100 ms and writes 0xF000 as a commit on this model."
+
+[[code]]
+vcp = 0xE9
+name = "pip"
+provenance = "inferred"
+note = "DDPM enables asymmetric PBP layouts on this model; the layout set comes from E9( ) in the capability string."

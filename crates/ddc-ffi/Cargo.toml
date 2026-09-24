@@ -1,0 +1,22 @@
+[package]
+name = "ddc-ffi"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+rust-version.workspace = true
+readme.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "C ABI for delldisplay, for Swift, Go, Python or any C caller."
+publish = false
+
+[lib]
+name = "delldisplay"
+crate-type = ["cdylib", "staticlib"]
+
+[dependencies]
+ddc-transport = { path = "../ddc-transport" }
+
+[dev-dependencies]
+ddc-core = { path = "../ddc-core" }

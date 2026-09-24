@@ -1,0 +1,16 @@
+# From DDPM's model tables; not measured.
+
+[panel]
+models = ["DELL P3426WEB", "DELL S3225QC"]
+
+[[code]]
+vcp = 0x63
+name = "audio-source"
+provenance = "inferred"
+note = "DDPM builds the PBP audio source menu from capability tokens F1 (main) and F2 (sub) on this model instead of window indexes."
+
+[[code]]
+vcp = 0xF2
+name = "status"
+provenance = "inferred"
+note = "Bit 7 means busy; on 2025 and later models DDPM reads bits 0 and 9 as brightness and contrast locked under HDR, and bit 8 as iMST."

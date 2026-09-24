@@ -1,0 +1,11 @@
+# From DDPM's model tables; not measured.
+
+[panel]
+models = ["DELL U2723QE", "DELL U2723QX", "DELL U3223QZ"]
+
+[[code]]
+vcp = 0xE2
+name = "preset-mode"
+provenance = "inferred"
+values = "0x00=standard, 0x04=game, 0x0B=srgb, 0x1A=rec709, 0x1B=dci-p3, 0x1C=rec2020, 0x2A=adobergb1, 0x2B=adobergb2, 0x2C=custom1, 0x2D=custom2, 0x2E=custom3, 0x3A=display-hdr"
+note = "Preset index per DDPM; the offered set comes from E2( ) in the capability string, and game only appears when it lists 1E."

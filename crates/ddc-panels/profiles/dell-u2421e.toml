@@ -1,0 +1,35 @@
+# From DDPM's model tables; not measured.
+
+[panel]
+models = ["DELL U2421E", "DELL U2520D"]
+
+[[code]]
+vcp = 0x10
+name = "brightness"
+provenance = "inferred"
+note = "DDPM writes this once without retry, since a repeat may push the panel into a flash-write state."
+
+[[code]]
+vcp = 0x12
+name = "contrast"
+provenance = "inferred"
+note = "DDPM writes this once without retry, since a repeat may push the panel into a flash-write state."
+
+[[code]]
+vcp = 0x62
+name = "volume"
+provenance = "inferred"
+note = "DDPM writes this once without retry, since a repeat may push the panel into a flash-write state."
+
+[[code]]
+vcp = 0x8D
+name = "audio-mute"
+provenance = "inferred"
+values = "0x01=muted, 0x02=unmuted"
+note = "DDPM writes this once without retry, after first writing 0x02 and waiting 100 ms as it does on every model."
+
+[[code]]
+vcp = 0xC8
+name = "display-controller"
+provenance = "inferred"
+note = "DDPM treats this as a Realtek-scaler panel (low byte 0x09) and cleans the bus and waits 100 ms before every read."

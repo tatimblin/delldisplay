@@ -1,0 +1,16 @@
+# From DDPM's model tables; not measured.
+
+[panel]
+models = ["DELL U3824DW"]
+
+[[code]]
+vcp = 0xE7
+name = "usb-kvm"
+provenance = "inferred"
+note = "DDPM packs 2-bit fields descending from bit 14 that index 0xEE, the reverse of the order measured on the U4323QE, so verify before writing."
+
+[[code]]
+vcp = 0xEE
+name = "usb-port-inventory"
+provenance = "inferred"
+note = "Port codes 0 and 1 mean USB-C1 and USB-C2 on this model rather than USB-B1 and USB-B2, and codes 8-D are unused."

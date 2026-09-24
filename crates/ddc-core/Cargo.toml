@@ -1,0 +1,19 @@
+[package]
+name = "ddc-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+rust-version.workspace = true
+readme.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "Platform-independent DDC/CI protocol plus Dell panel logic (guards, plans, KVM/PxP/picture state). No OS calls."
+publish = false
+
+[features]
+# Exposes the captured U4323QE fixture to other crates' tests.
+fixture = []
+
+[dependencies]
+ddc-panels = { path = "../ddc-panels", version = "0.1.0" }

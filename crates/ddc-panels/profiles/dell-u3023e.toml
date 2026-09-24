@@ -1,0 +1,29 @@
+# From DDPM's model tables; not measured.
+
+[panel]
+models = ["DELL U3023E", "DELL U3223QE"]
+
+[[code]]
+vcp = 0xC8
+name = "display-controller"
+provenance = "inferred"
+note = "DDPM treats this as a Realtek-scaler panel (low byte 0x09) and cleans the bus and waits 100 ms before every read."
+
+[[code]]
+vcp = 0xDC
+name = "picture-mode"
+provenance = "inferred"
+note = "DDPM writes 0x00 here once without retry, since the panel may blank when PxP turns off."
+
+[[code]]
+vcp = 0xE2
+name = "preset-mode"
+provenance = "inferred"
+values = "0x00=standard, 0x04=game, 0x0B=srgb, 0x1A=rec709, 0x1B=dci-p3, 0x1C=rec2020, 0x2A=adobergb1, 0x2B=adobergb2, 0x2C=custom1, 0x2D=custom2, 0x2E=custom3, 0x3A=display-hdr"
+note = "DDPM writes this preset index once without retry, and the offered set comes from E2( ) in the capability string."
+
+[[code]]
+vcp = 0xE9
+name = "pip"
+provenance = "inferred"
+note = "DDPM writes this once without retry, and the layout set comes from E9( ) in the capability string."

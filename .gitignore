@@ -1,0 +1,21 @@
+# Build output
+/target/
+
+# Local agent worktrees and settings
+/.claude/
+
+# Vendor app bundles, installers and capture logs. Never commit these.
+/capture/
+*.zip
+
+# Compiled tools (sources are tracked, binaries are not)
+/tools/probe/hidprobe
+/tools/harness/sdkharness
+/tools/harness/session
+*.dylib
+*.o
+__pycache__/
+*.pyc
+
+# macOS
+.DS_Store

@@ -1,0 +1,23 @@
+# From DDPM's model tables; not measured.
+
+[panel]
+models = ["DELL U2724DE"]
+
+[[code]]
+vcp = 0x60
+name = "input"
+provenance = "inferred"
+values = "0x0F=dp1, 0x11=hdmi1, 0x19=thunderbolt"
+note = "DDPM's input allow-list for this model; it refuses any other code before it reaches the wire."
+
+[[code]]
+vcp = 0xC8
+name = "display-controller"
+provenance = "inferred"
+note = "DDPM treats this as a Realtek-scaler panel (low byte 0x09) and cleans the bus and waits 100 ms before every read."
+
+[[code]]
+vcp = 0xE8
+name = "pip-sub-source"
+provenance = "inferred"
+note = "Three 5-bit input codes packed as sub1 | sub2<<5 | sub3<<10, which DDPM limits to 0x0F, 0x11, 0x19 or 0 on this model."

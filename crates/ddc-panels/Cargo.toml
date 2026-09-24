@@ -1,0 +1,16 @@
+[package]
+name = "ddc-panels"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+rust-version.workspace = true
+readme.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "Per-panel VCP code facts and quirks for Dell monitors, compiled from TOML profiles."
+publish = false
+
+[build-dependencies]
+serde = { version = "1", features = ["derive"] }
+toml = "0.9"

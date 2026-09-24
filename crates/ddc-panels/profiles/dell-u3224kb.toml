@@ -1,0 +1,35 @@
+# From DDPM's model tables; not measured.
+
+[panel]
+models = ["DELL U3224KB"]
+
+[[code]]
+vcp = 0x60
+name = "input"
+provenance = "inferred"
+values = "0x10=mdp1, 0x11=hdmi1, 0x19=thunderbolt"
+note = "DDPM's input allow-list for this model; it refuses any other code before it reaches the wire."
+
+[[code]]
+vcp = 0xE4
+name = "uniformity-compensation"
+provenance = "inferred"
+note = "DDPM forces this off on this model even when the capability string lists E4."
+
+[[code]]
+vcp = 0xE7
+name = "usb-kvm"
+provenance = "inferred"
+note = "DDPM packs 2-bit fields descending from bit 14 that index 0xEE, the reverse of the order measured on the U4323QE, so verify before writing."
+
+[[code]]
+vcp = 0xE8
+name = "pip-sub-source"
+provenance = "inferred"
+note = "Three 5-bit input codes packed as sub1 | sub2<<5 | sub3<<10, which DDPM limits to 0x10, 0x11, 0x19 or 0 on this model."
+
+[[code]]
+vcp = 0xEE
+name = "usb-port-inventory"
+provenance = "inferred"
+note = "Four nibbles of upstream port codes, where DDPM drives code 8 as Thunderbolt1 instead of USB-C1 on this model."

@@ -1,0 +1,16 @@
+# From DDPM's model tables; not measured.
+
+[panel]
+models = ["DELL U4021QW"]
+
+[[code]]
+vcp = 0xE7
+name = "usb-kvm"
+provenance = "inferred"
+note = "DDPM labels field value 2 as Thunderbolt instead of USB-C1 on this model, and its descending field order is the reverse of the U4323QE's, so verify before writing."
+
+[[code]]
+vcp = 0xEE
+name = "usb-port-inventory"
+provenance = "inferred"
+note = "Four nibbles of upstream port codes, where DDPM maps connection type 02 to Thunderbolt on this model."
