@@ -1,0 +1,22 @@
+{
+  "name": "delldisplay",
+  "displayName": "delldisplay",
+  "description": "Lets Claude put this computer on a Dell monitor shared with other computers, beside what you're working on, and put it back after. Runs `delldisplay mcp`; macOS only.",
+  "author": {
+    "name": "Tristan Timblin",
+    "url": "https://github.com/tatimblin"
+  },
+  "homepage": "https://github.com/tatimblin/delldisplay",
+  "repository": "https://github.com/tatimblin/delldisplay",
+  "license": "MIT",
+  "keywords": [
+    "dell",
+    "monitor",
+    "display",
+    "ddc-ci",
+    "kvm",
+    "pip",
+    "mcp",
+    "macos"
+  ]
+}
