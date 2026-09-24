@@ -13,11 +13,14 @@ plain MCCS baseline.
 
 1. Turn on DDC/CI on the monitor: OSD Menu › Others › DDC/CI.
 2. Install it, one of:
-   - Download `delldisplay-<version>-macos-universal.tar.gz` from
-     [Releases](https://github.com/tatimblin/delldisplay/releases), extract, and
-     put `delldisplay` on your `PATH`. The binary isn't signed, so if you
-     downloaded it in a browser, clear the quarantine flag first:
-     `xattr -dr com.apple.quarantine <extracted-dir>`.
+   - Homebrew: `brew install tatimblin/tap/delldisplay`.
+   - The install script from the latest release, which puts `delldisplay` in
+     `~/.cargo/bin`:
+     `curl --proto '=https' --tlsv1.2 -LsSf https://github.com/tatimblin/delldisplay/releases/latest/download/ddc-cli-installer.sh | sh`
+   - A tarball from [Releases](https://github.com/tatimblin/delldisplay/releases)
+     (`ddc-cli-aarch64-apple-darwin.tar.xz` or `ddc-cli-x86_64-apple-darwin.tar.xz`).
+     The binary isn't signed, so if you downloaded it in a browser, clear the
+     quarantine flag first: `xattr -dr com.apple.quarantine <extracted-dir>`.
    - With Rust 1.87+: `cargo install --git https://github.com/tatimblin/delldisplay --locked ddc-cli`
      (the package is `ddc-cli`; the command it installs is `delldisplay`).
    - From a clone: `cargo install --path crates/ddc-cli`.

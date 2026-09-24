@@ -1,0 +1,50 @@
+# Nothing goes to crates.io (every crate is publish = false), so versions come
+# from the v* git tags. All five crates share workspace.package.version and
+# release together; ddc-cli carries the tag and the changelog. dist builds the
+# GitHub Release when the tag lands (.github/workflows/release.yml).
+[workspace]
+git_only = true
+git_tag_name = "v{{ version }}"
+git_tag_enable = false
+git_release_enable = false
+changelog_update = false
+semver_check = false
+pr_name = "chore: release v{{ version }}"
+
+[[package]]
+name = "ddc-cli"
+git_tag_enable = true
+changelog_update = true
+changelog_path = "CHANGELOG.md"
+changelog_include = ["ddc-core", "ddc-transport", "ddc-panels", "ddc-ffi"]
+version_group = "delldisplay"
+
+[[package]]
+name = "ddc-core"
+version_group = "delldisplay"
+
+[[package]]
+name = "ddc-transport"
+version_group = "delldisplay"
+
+[[package]]
+name = "ddc-panels"
+version_group = "delldisplay"
+
+[[package]]
+name = "ddc-ffi"
+version_group = "delldisplay"
+
+[changelog]
+commit_parsers = [
+    { message = "^feat", group = "Added" },
+    { message = "^fix", group = "Fixed" },
+    { message = "^refactor", group = "Changed" },
+    { message = "^perf", group = "Performance" },
+    { message = "^docs", skip = true },
+    { message = "^chore", skip = true },
+    { message = "^ci", skip = true },
+    { message = "^test", skip = true },
+    { message = "^build", skip = true },
+]
+protect_breaking_commits = true

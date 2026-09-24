@@ -12,3 +12,21 @@ readme = "README.md"
 keywords = ["ddc", "ddc-ci", "monitor", "dell", "mccs"]
 categories = ["command-line-utilities", "hardware-support"]
 repository = "https://github.com/tatimblin/delldisplay"
+homepage = "https://github.com/tatimblin/delldisplay"
+
+# The profile that `dist` builds release artifacts with.
+[profile.dist]
+inherits = "release"
+lto = "thin"
+
+# Release artifacts, installers and the Homebrew formula. Regenerate
+# .github/workflows/release.yml with `dist generate` after changing this.
+[workspace.metadata.dist]
+cargo-dist-version = "0.31.0"
+ci = "github"
+installers = ["shell", "homebrew"]
+targets = ["aarch64-apple-darwin", "x86_64-apple-darwin"]
+tap = "tatimblin/homebrew-tap"
+publish-jobs = ["homebrew", "./publish-lib"]
+pr-run-mode = "plan"
+install-path = "CARGO_HOME"
