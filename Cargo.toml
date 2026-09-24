@@ -7,17 +7,22 @@ version = "0.1.0"
 edition = "2021"
 license = "MIT"
 authors = ["Tristan Timblin"]
-rust-version = "1.87"
+rust-version = "1.89"
 readme = "README.md"
 keywords = ["ddc", "ddc-ci", "monitor", "dell", "mccs"]
 categories = ["command-line-utilities", "hardware-support"]
 repository = "https://github.com/tatimblin/delldisplay"
 homepage = "https://github.com/tatimblin/delldisplay"
 
-# The profile that `dist` builds release artifacts with.
+# The profile that `dist` builds release artifacts with, tuned for size: the
+# CLI spends its time waiting on the panel, not computing.
 [profile.dist]
 inherits = "release"
-lto = "thin"
+opt-level = "z"
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+strip = true
 
 # Release artifacts, installers and the Homebrew formula. Regenerate
 # .github/workflows/release.yml with `dist generate` after changing this.

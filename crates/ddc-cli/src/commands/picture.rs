@@ -669,14 +669,7 @@ fn powernap<T: I2c>(d: &mut Ddc<T>, area: &Area, want: Option<Nap>, w: &Write, c
 
 /// Where the pre-mute level lives, per display.
 fn memo_path(ctx: &Ctx) -> PathBuf {
-    let base = ctx.state_dir.clone().unwrap_or_else(|| {
-        std::env::var_os("XDG_STATE_HOME")
-            .map(PathBuf::from)
-            .or_else(|| std::env::var_os("HOME").map(|h| PathBuf::from(h).join(".local/state")))
-            .unwrap_or_else(std::env::temp_dir)
-            .join("delldisplay")
-    });
-    base.join(format!("mute-level-{}", ctx.display))
+    ctx.state_dir().join(format!("mute-level-{}", ctx.display))
 }
 
 fn load_memo(path: &Path) -> Option<MuteMemo> {
