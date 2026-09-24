@@ -21,7 +21,7 @@ plain MCCS baseline.
      (`ddc-cli-aarch64-apple-darwin.tar.xz` or `ddc-cli-x86_64-apple-darwin.tar.xz`).
      The binary isn't signed, so if you downloaded it in a browser, clear the
      quarantine flag first: `xattr -dr com.apple.quarantine <extracted-dir>`.
-   - With Rust 1.87+: `cargo install --git https://github.com/tatimblin/delldisplay --locked ddc-cli`
+   - With Rust 1.89+: `cargo install --git https://github.com/tatimblin/delldisplay --locked ddc-cli`
      (the package is `ddc-cli`; the command it installs is `delldisplay`).
    - From a clone: `cargo install --path crates/ddc-cli`.
 3. Try it:
@@ -87,6 +87,45 @@ stderr. Reads print their own shape. Every write prints the same report:
 
 Some commands add fields (`identity import` adds `monitor_match` and `skipped`).
 
+## AI agents (MCP)
+
+`delldisplay mcp` serves the monitor to AI agents over stdio, so an agent
+working on one of the computers that share it can decide to put itself on
+screen, for example beside what you're working on, and put things back after.
+
+```sh
+claude mcp add delldisplay -- delldisplay mcp
+```
+
+Any MCP client works the same way: the command is `delldisplay mcp`.
+
+- `display_state` reads the layout, what each pane shows, and which input is
+  this computer (the monitor reports which port each request arrives on).
+- `display_arrange` picks a layout and what goes where, e.g. `side-by-side`
+  with `{"right": "self"}`. It takes a `reason`, shown as a macOS notification.
+- `display_restore` puts back what this computer changed, and refuses if anyone
+  has changed the monitor since.
+
+The agent's permission prompts appear on the computer that's running it, which
+may not be the one you're looking at, so the server enforces its own rules
+instead of relying on prompts. By default a change must keep everything
+already on screen visible somewhere (a split or picture-in-picture, not a
+takeover), and changes are at least 10 seconds apart. Background agents need
+the tools allowed up front, e.g. `mcp__delldisplay__*` in Claude Code's
+`permissions.allow`. To change the defaults, write
+`~/.config/delldisplay/mcp.toml`:
+
+```toml
+allow_takeover = false   # true lets an agent replace what's on screen
+cooldown_seconds = 10
+notify = true
+# self_input = "dp2"     # only if the monitor doesn't report it
+# display = 0
+```
+
+The server is built in by default. Build without it with
+`cargo install --no-default-features …`.
+
 ## Safety
 
 - KVM and association writes (`0xE7`) move the monitor's USB hub between hosts.
@@ -115,7 +154,7 @@ on the CLI. Details in [docs/PROTOCOL.md](docs/PROTOCOL.md).
                     double-write); macos.rs is the IOAVService backend
     ddc-panels/     per-panel profiles as TOML in profiles/, turned into
                     Rust at build time and selected by EDID model
-    ddc-cli/        the `delldisplay` binary
+    ddc-cli/        the `delldisplay` binary, including `delldisplay mcp`
     ddc-ffi/        cdylib/staticlib plus include/delldisplay.h
 
 Porting to another OS means implementing the `I2c` trait:

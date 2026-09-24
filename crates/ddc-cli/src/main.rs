@@ -5,6 +5,8 @@
 //! opened, so they never touch the device.
 
 mod commands;
+#[cfg(feature = "mcp")]
+mod mcp;
 
 use std::ffi::OsString;
 use std::path::PathBuf;
@@ -18,7 +20,11 @@ use commands::args::Write;
 use commands::exec::{self, exit, Ctx};
 use commands::{basic, identity, kvm, mapping, picture, pxp, watch};
 
-const HELP: &str = "\
+/// The top-level help, with the `mcp` section only when it's built in.
+macro_rules! help {
+    ($agents:literal) => {
+        concat!(
+            "\
 {about}
 
 {usage-heading} {usage}
@@ -39,13 +45,28 @@ Writing:
   wake      Power on and clear PowerNap, retried
   pxp       PiP/PBP layout, sub-window sources, window actions
   kvm       USB KVM: association map, commit, switch
-
+",
+            $agents,
+            "
 Exploring (writes the panel over and over, so stay at the screen):
   map       Step through a code's values and note what each one does
   pipmap    Same, for the PiP/PBP layouts
 
 Options:
-{options}{after-help}";
+{options}{after-help}"
+        )
+    };
+}
+
+#[cfg(feature = "mcp")]
+const HELP: &str = help!(
+    "
+For AI agents:
+  mcp       Serve the display as MCP tools over stdio
+"
+);
+#[cfg(not(feature = "mcp"))]
+const HELP: &str = help!("");
 
 const GLOBAL: &str = "Global options";
 
@@ -114,6 +135,9 @@ pub enum Cmd {
     Map(mapping::Map),
     /// Step through the PiP/PBP layouts (0xE9) and note what each one does.
     Pipmap(mapping::Pipmap),
+    /// Serve the display to AI agents as MCP tools over stdio.
+    #[cfg(feature = "mcp")]
+    Mcp(mcp::Args),
 }
 
 /// Knobs tests turn: where the mute memo lives, and a cap on every wait.
@@ -159,7 +183,7 @@ fn entry<'d, T: I2c + 'd>(
 fn main() -> ExitCode {
     let mut slot = None;
     let code = entry(std::env::args_os(), Env::default(), |cli| {
-        Ok(slot.insert(open(cli)?))
+        Ok(slot.insert(open_display(cli.display, !cli.no_double_write)?))
     });
     ExitCode::from(code)
 }
@@ -168,12 +192,19 @@ fn main() -> ExitCode {
 #[cfg(target_os = "macos")]
 const FIND_FOR: Duration = Duration::from_secs(3);
 
+/// This platform's DDC transport.
 #[cfg(target_os = "macos")]
-fn open(cli: &Cli) -> Result<Ddc<ddc_transport::macos::AvService>, String> {
+pub type Transport = ddc_transport::macos::AvService;
+#[cfg(not(target_os = "macos"))]
+pub type Transport = NoTransport;
+
+/// Open display `index` (see `list`) and pick its panel profile from the EDID.
+#[cfg(target_os = "macos")]
+pub fn open_display(index: usize, double_write: bool) -> Result<Ddc<Transport>, String> {
     use ddc_transport::{macos::AvService, Error, Policy};
     let start = std::time::Instant::now();
     let av = loop {
-        match AvService::open(cli.display) {
+        match AvService::open(index) {
             Err(Error::NotFound) if start.elapsed() < FIND_FOR => {
                 std::thread::sleep(Duration::from_millis(250))
             }
@@ -181,7 +212,7 @@ fn open(cli: &Cli) -> Result<Ddc<ddc_transport::macos::AvService>, String> {
         }
     };
     let policy = Policy {
-        double_write: !cli.no_double_write,
+        double_write,
         ..Policy::default()
     };
     let mut d = Ddc::with_policy(av, policy);
@@ -199,7 +230,7 @@ fn open(cli: &Cli) -> Result<Ddc<ddc_transport::macos::AvService>, String> {
 }
 
 #[cfg(not(target_os = "macos"))]
-fn open(_: &Cli) -> Result<Ddc<NoTransport>, String> {
+pub fn open_display(_: usize, _: bool) -> Result<Ddc<Transport>, String> {
     Err(String::from(
         "no DDC transport for this OS yet; only macOS is supported",
     ))
@@ -207,7 +238,7 @@ fn open(_: &Cli) -> Result<Ddc<NoTransport>, String> {
 
 /// Stands in for a transport on platforms that don't have one.
 #[cfg(not(target_os = "macos"))]
-enum NoTransport {}
+pub enum NoTransport {}
 
 #[cfg(not(target_os = "macos"))]
 impl I2c for NoTransport {

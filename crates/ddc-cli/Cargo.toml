@@ -28,8 +28,16 @@ formula = "delldisplay"
 clap = { version = "4.5", features = ["derive"] }
 ddc-core = { path = "../ddc-core" }
 ddc-transport = { path = "../ddc-transport" }
+rmcp = { version = "3.4", default-features = false, features = ["server", "transport-io"], optional = true }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+tokio = { version = "1", default-features = false, features = ["rt", "io-std", "macros", "sync"], optional = true }
+toml = { version = "0.9", optional = true }
+
+[features]
+default = ["mcp"]
+# `delldisplay mcp`: the MCP server for AI agents. Off leaves out rmcp and tokio.
+mcp = ["dep:rmcp", "dep:tokio", "dep:toml"]
 
 [dev-dependencies]
 ddc-core = { path = "../ddc-core", features = ["fixture"] }

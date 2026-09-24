@@ -5,6 +5,7 @@
 //! to a real display.
 #![forbid(unsafe_code)]
 
+pub mod arrange;
 pub mod bits;
 pub mod caps;
 pub mod edid;
