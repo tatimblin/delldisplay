@@ -8,7 +8,8 @@
 use std::time::Duration;
 
 use ddc_core::arrange::{self, Source, View};
-use ddc_core::guard::{Intent, Snapshot};
+use ddc_core::caps::Capabilities;
+use ddc_core::guard::{self, Intent, Snapshot};
 use ddc_core::pxp::{self, Window};
 use ddc_core::vcp::{self, Panel, Vcp};
 use ddc_transport::{Ddc, I2c, Runner};
@@ -81,9 +82,23 @@ fn read<T: I2c>(d: &mut Ddc<T>, call: &Call) -> Result<Now, String> {
         None => model.clone(),
     };
     let mut state = call.store.load(&key);
-    let mut snap = Runner::new(d)
-        .read_snapshot()
-        .map_err(|e| format!("couldn't read the monitor: {e}"))?;
+    let mut dirty = false;
+    // The capability string takes about 2 s to read and never changes for a
+    // given monitor, so it's read once per monitor and kept.
+    let caps = match state.caps.as_deref() {
+        Some(raw) if edid.is_some() => Capabilities::parse(raw),
+        _ => {
+            let caps = d
+                .capabilities()
+                .map_err(|e| format!("couldn't read the monitor: {e}"))?;
+            if edid.is_some() {
+                state.caps = Some(caps.raw.clone());
+                dirty = true;
+            }
+            caps
+        }
+    };
+    let mut snap = snapshot(d, &caps);
     // One 0x60 read can catch Auto Select mid-hunt; take the commonest of several.
     if let Ok(r) = d.sample_mode(Vcp::INPUT_SOURCE) {
         snap.put(Vcp::INPUT_SOURCE, r.current);
@@ -100,6 +115,9 @@ fn read<T: I2c>(d: &mut Ddc<T>, call: &Call) -> Result<Now, String> {
     };
     if detected.is_some() && detected != state.this_input {
         state.this_input = detected;
+        dirty = true;
+    }
+    if dirty {
         let _ = call.store.save(&key, &state);
     }
     Ok(Now {
@@ -113,9 +131,15 @@ fn read<T: I2c>(d: &mut Ddc<T>, call: &Call) -> Result<Now, String> {
     })
 }
 
+/// The guard snapshot, with capabilities already in hand.
+fn snapshot<T: I2c>(d: &mut Ddc<T>, caps: &Capabilities) -> Snapshot {
+    let (values, _) = Runner::new(d).capture(&guard::READ_ORDER);
+    Snapshot::from_reads(d.panel(), caps.clone(), &values)
+}
+
 /// The view alone, for reading back after a write.
-fn read_view<T: I2c>(d: &mut Ddc<T>) -> Option<View> {
-    View::read(&Runner::new(d).read_snapshot().ok()?)
+fn read_view<T: I2c>(d: &mut Ddc<T>, caps: &Capabilities) -> Option<View> {
+    View::read(&snapshot(d, caps))
 }
 
 fn input_name(panel: &Panel, code: u8) -> String {
@@ -357,7 +381,7 @@ pub fn arrange<T: I2c>(d: &mut Ddc<T>, call: &Call, args: &Map<String, Value>) -
     let mut after = target;
     let mut notified = false;
     if report.ok && !dry_run {
-        after = read_view(d).unwrap_or(target);
+        after = read_view(d, &now.snap.caps).unwrap_or(target);
         // Changes stack: restore goes back to before the first one, as long as
         // nobody else changed the monitor in between.
         let first = match &state.restore {
@@ -443,7 +467,7 @@ pub fn restore<T: I2c>(d: &mut Ddc<T>, call: &Call, args: &Map<String, Value>) -
     );
     let mut after = target;
     if report.ok && !dry_run {
-        after = read_view(d).unwrap_or(target);
+        after = read_view(d, &now.snap.caps).unwrap_or(target);
         let mut state = now.state.clone();
         state.restore = None;
         if let Err(e) = call.store.save(&now.key, &state) {
@@ -573,6 +597,39 @@ mod tests {
 
     fn split_right() -> Value {
         json!({ "layout": "side-by-side", "panes": { "right": "self" }, "reason": "showing the build" })
+    }
+
+    #[test]
+    fn the_capability_string_is_read_once_per_monitor() {
+        use ddc_transport::testing::{edid_block, EdidPanel, Op};
+        let t = EdidPanel::new(u4323qe(), edid_block("DELL U4323QE", "ABC123"));
+        let mut d = fast(t);
+        let base = crate::test_support::state_dir("mcp-caps-cache");
+        let _ = std::fs::remove_dir_all(&base);
+        let (cfg, store) = (Config::default(), Store::new(&base));
+        let call = Call {
+            cfg: &cfg,
+            store: &store,
+            now: 0,
+            max_dwell: Some(Duration::ZERO),
+            notify: &|_| false,
+            client: None,
+        };
+        let caps_reads = |d: &Ddc<EdidPanel>| {
+            d.transport
+                .ddc
+                .ops()
+                .iter()
+                .filter(|o| matches!(o, Op::Caps(0)))
+                .count()
+        };
+        assert!(state(&mut d, &call).ok);
+        assert_eq!(caps_reads(&d), 1);
+        let r = state(&mut d, &call);
+        assert!(r.ok);
+        assert_eq!(caps_reads(&d), 1, "the second call used the kept string");
+        assert_eq!(r.body["layouts"].as_array().unwrap().len(), 11);
+        assert!(store.load("DELL U4323QE ABC123").caps.is_some());
     }
 
     #[test]

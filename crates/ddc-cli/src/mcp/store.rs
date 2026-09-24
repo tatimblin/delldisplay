@@ -8,9 +8,10 @@
 //!   sessions) take turns instead of interleaving I2C frames.
 //! - `log.jsonl`: one line per change, refusal or failure.
 
-use std::fs::{self, File, OpenOptions};
+use std::fs::{self, File, OpenOptions, TryLockError};
 use std::io::Write as _;
 use std::path::{Path, PathBuf};
+use std::time::{Duration, Instant};
 
 use ddc_core::arrange::View;
 use serde::{Deserialize, Serialize};
@@ -65,6 +66,8 @@ pub struct State {
     /// Unix seconds of the last change made through the server.
     pub last_write: Option<u64>,
     pub restore: Option<Saved>,
+    /// The capability string, which doesn't change for a given monitor.
+    pub caps: Option<String>,
 }
 
 pub struct Store {
@@ -79,17 +82,39 @@ impl Store {
         }
     }
 
-    /// Hold this for the whole call. Released when dropped.
-    pub fn lock(&self) -> Result<File, String> {
+    /// [`lock`](Store::lock), giving up after `wait`: `Ok(None)` means
+    /// another call still holds it.
+    pub fn lock_within(&self, wait: Duration) -> Result<Option<File>, String> {
+        let f = self.lock_file()?;
+        let start = Instant::now();
+        loop {
+            match f.try_lock() {
+                Ok(()) => return Ok(Some(f)),
+                Err(TryLockError::WouldBlock) if start.elapsed() < wait => {
+                    std::thread::sleep(Duration::from_millis(50))
+                }
+                Err(TryLockError::WouldBlock) => return Ok(None),
+                Err(TryLockError::Error(e)) => return Err(e.to_string()),
+            }
+        }
+    }
+
+    fn lock_file(&self) -> Result<File, String> {
         fs::create_dir_all(&self.dir).map_err(|e| format!("{}: {e}", self.dir.display()))?;
         let path = self.dir.join("lock");
-        let f = OpenOptions::new()
+        OpenOptions::new()
             .create(true)
             .truncate(false)
             .write(true)
             .open(&path)
-            .map_err(|e| format!("{}: {e}", path.display()))?;
-        f.lock().map_err(|e| format!("{}: {e}", path.display()))?;
+            .map_err(|e| format!("{}: {e}", path.display()))
+    }
+
+    /// Hold this for the whole call. Released when dropped.
+    #[cfg(test)]
+    pub fn lock(&self) -> Result<File, String> {
+        let f = self.lock_file()?;
+        f.lock().map_err(|e| e.to_string())?;
         Ok(f)
     }
 
@@ -168,6 +193,7 @@ mod tests {
                 reason: String::from("tests"),
                 at: 10,
             }),
+            caps: Some(String::from("(vcp(10 60))")),
         };
         s.save("DELL U4323QE 123", &state).unwrap();
         assert_eq!(s.load("DELL U4323QE 123"), state);
@@ -181,6 +207,7 @@ mod tests {
         let path = s.dir.join("lock");
         let other = OpenOptions::new().write(true).open(&path).unwrap();
         assert!(other.try_lock().is_err());
+        assert!(s.lock_within(Duration::from_millis(100)).unwrap().is_none());
         drop(held);
         assert!(other.try_lock().is_ok());
     }
