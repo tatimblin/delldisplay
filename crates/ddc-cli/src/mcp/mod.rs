@@ -74,6 +74,8 @@ pub fn run(a: &Args, ctx: &Ctx) -> u8 {
         store: Arc::new(Store::new(&ctx.state_dir())),
         max_dwell: ctx.max_dwell,
         open: Arc::new(|index: usize| crate::open_display(index, true)),
+        limit: CALL_LIMIT,
+        lock_wait: LOCK_WAIT,
     };
     let rt = match tokio::runtime::Builder::new_current_thread()
         .enable_all()
@@ -90,6 +92,8 @@ pub fn run(a: &Args, ctx: &Ctx) -> u8 {
         service.waiting().await?;
         Ok::<_, Box<dyn std::error::Error>>(())
     });
+    // Don't wait on a call still stuck in the kernel; exit when the agent does.
+    rt.shutdown_background();
     match served {
         Ok(()) => exit::OK,
         Err(e) => {
@@ -101,22 +105,39 @@ pub fn run(a: &Args, ctx: &Ctx) -> u8 {
 
 type Open<T> = dyn Fn(usize) -> Result<Ddc<T>, String> + Send + Sync;
 
+/// The longest a tool call may take. A layout change with its read-back is
+/// about 15 s; past this the panel has stopped answering.
+const CALL_LIMIT: Duration = Duration::from_secs(45);
+/// How long a call waits for another call's lock before giving up.
+const LOCK_WAIT: Duration = Duration::from_secs(5);
+
+const NOT_ANSWERING: &str = "the monitor stopped answering this computer: macOS's DDC \
+    call is stuck and may stay stuck for minutes. Nothing more will be sent until it \
+    returns. This can happen while this computer isn't on screen; try again later.";
+
 struct Server<T: I2c> {
     cfg: Arc<Config>,
     store: Arc<Store>,
     display: usize,
     max_dwell: Option<Duration>,
     open: Arc<Open<T>>,
+    limit: Duration,
+    lock_wait: Duration,
 }
 
 impl<T: I2c + 'static> Server<T> {
     /// Run one tool on a blocking thread: lock, open, call, close.
     async fn run(&self, name: String, args: Map<String, Value>, client: Option<String>) -> Reply {
         let (cfg, store, open) = (self.cfg.clone(), self.store.clone(), self.open.clone());
-        let (display, max_dwell) = (self.display, self.max_dwell);
+        let (display, max_dwell, lock_wait) = (self.display, self.max_dwell, self.lock_wait);
         let job = move || {
-            let _held = match store.lock() {
-                Ok(f) => f,
+            let _held = match store.lock_within(lock_wait) {
+                Ok(Some(f)) => f,
+                Ok(None) => {
+                    return Reply::error(format!(
+                        "an earlier call is still waiting on the monitor. {NOT_ANSWERING}"
+                    ))
+                }
                 Err(e) => return Reply::error(format!("couldn't take the lock: {e}")),
             };
             let mut d = match open(display) {
@@ -141,9 +162,17 @@ impl<T: I2c + 'static> Server<T> {
                 other => Reply::error(format!("no tool named {other}")),
             }
         };
-        tokio::task::spawn_blocking(job)
-            .await
-            .unwrap_or_else(|e| Reply::error(format!("the tool stopped unexpectedly: {e}")))
+        // A DDC call can block in the kernel for minutes, and it can't be
+        // cancelled. Answer the agent anyway; the thread finishes on its own
+        // and holds the lock until then.
+        match tokio::time::timeout(self.limit, tokio::task::spawn_blocking(job)).await {
+            Ok(Ok(reply)) => reply,
+            Ok(Err(e)) => Reply::error(format!("the tool stopped unexpectedly: {e}")),
+            Err(_) => Reply::error(format!(
+                "no answer within {} s: {NOT_ANSWERING}",
+                self.limit.as_secs()
+            )),
+        }
     }
 }
 
@@ -309,5 +338,74 @@ impl<T: I2c + 'static> ServerHandler for Server<T> {
         let client = context.peer.peer_info().map(|i| i.client_info.name.clone());
         let args = request.arguments.unwrap_or_default();
         Ok(result(self.run(name, args, client).await).into())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ddc_transport::testing::{fast, u4323qe};
+    use ddc_transport::Error;
+
+    /// A transport whose first write blocks for a second, like a DDC write
+    /// macOS won't return. Later calls fail at once.
+    struct Stuck(bool);
+
+    impl I2c for Stuck {
+        fn write(&mut self, _: u8, _: u8, _: &[u8]) -> Result<(), Error> {
+            if !std::mem::replace(&mut self.0, true) {
+                std::thread::sleep(Duration::from_secs(1));
+            }
+            Err(Error::Io {
+                op: "write",
+                code: -1,
+            })
+        }
+        fn read(&mut self, _: u8, _: u8, _: &mut [u8]) -> Result<(), Error> {
+            Err(Error::Io {
+                op: "read",
+                code: -1,
+            })
+        }
+    }
+
+    fn server<T: I2c + 'static>(name: &str, open: Arc<Open<T>>) -> Server<T> {
+        let base = crate::test_support::state_dir(&format!("server-{name}"));
+        let _ = std::fs::remove_dir_all(&base);
+        Server {
+            cfg: Arc::new(Config::default()),
+            store: Arc::new(Store::new(&base)),
+            display: 0,
+            max_dwell: Some(Duration::ZERO),
+            open,
+            limit: Duration::from_millis(300),
+            lock_wait: Duration::from_millis(100),
+        }
+    }
+
+    #[tokio::test]
+    async fn a_stuck_panel_gets_an_answer_and_later_calls_dont_queue_forever() {
+        let s = server("stuck", Arc::new(|_| Ok(fast(Stuck(false)))));
+        let first = s.run("display_state".into(), Map::new(), None).await;
+        assert!(!first.ok);
+        assert!(first.body["error"]
+            .as_str()
+            .unwrap()
+            .contains("no answer within"));
+        // The first call's thread still holds the lock.
+        let second = s.run("display_state".into(), Map::new(), None).await;
+        assert!(!second.ok);
+        assert!(
+            second.body.to_string().contains("stopped answering"),
+            "{}",
+            second.body
+        );
+    }
+
+    #[tokio::test]
+    async fn a_healthy_panel_answers_within_the_limit() {
+        let s = server("healthy", Arc::new(|_| Ok(fast(u4323qe()))));
+        let r = s.run("display_state".into(), Map::new(), None).await;
+        assert!(r.ok, "{}", r.body);
     }
 }
