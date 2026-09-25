@@ -1,0 +1,14 @@
+#!/bin/sh
+# The plugin's MCP server: finds delldisplay and runs `delldisplay mcp`.
+# Stdout is the protocol stream, so messages go to stderr only.
+
+# shellcheck source=SCRIPTDIR/find-delldisplay.sh
+. "$(dirname "$0")/find-delldisplay.sh"
+
+if ! bin=$(find_delldisplay); then
+    echo "delldisplay: not found on PATH or in /opt/homebrew/bin, /usr/local/bin or ~/.cargo/bin." >&2
+    echo "Install it with: brew install tatimblin/tap/delldisplay" >&2
+    exit 1
+fi
+
+exec "$bin" mcp "$@"

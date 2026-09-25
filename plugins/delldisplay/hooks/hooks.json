@@ -1,0 +1,16 @@
+{
+  "description": "Say how to install or upgrade delldisplay when `delldisplay mcp` can't run.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}\"/scripts/session-start",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

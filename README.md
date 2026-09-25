@@ -93,6 +93,18 @@ Some commands add fields (`identity import` adds `monitor_match` and `skipped`).
 working on one of the computers that share it can decide to put itself on
 screen, for example beside what you're working on, and put things back after.
 
+In Claude Code, install the plugin. It runs the server, finds `delldisplay`
+even when Claude Code was launched from the Dock with a minimal `PATH`, says
+at session start if `delldisplay` is missing or too old for `mcp`, and adds a
+skill on sharing the monitor politely:
+
+```
+/plugin marketplace add tatimblin/delldisplay
+/plugin install delldisplay@delldisplay
+```
+
+Or add the server by hand:
+
 ```sh
 claude mcp add delldisplay -- delldisplay mcp
 ```
@@ -111,8 +123,9 @@ may not be the one you're looking at, so the server enforces its own rules
 instead of relying on prompts. By default a change must keep everything
 already on screen visible somewhere (a split or picture-in-picture, not a
 takeover), and changes are at least 10 seconds apart. Background agents need
-the tools allowed up front, e.g. `mcp__delldisplay__*` in Claude Code's
-`permissions.allow`. To change the defaults, write
+the tools allowed up front in Claude Code's `permissions.allow`:
+`mcp__plugin_delldisplay_delldisplay__*` with the plugin, or
+`mcp__delldisplay__*` with `claude mcp add`. To change the defaults, write
 `~/.config/delldisplay/mcp.toml`:
 
 ```toml

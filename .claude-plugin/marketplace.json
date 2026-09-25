@@ -1,0 +1,16 @@
+{
+  "name": "delldisplay",
+  "description": "Claude Code plugins for delldisplay, a DDC/CI tool for Dell monitors on macOS.",
+  "owner": {
+    "name": "Tristan Timblin",
+    "url": "https://github.com/tatimblin"
+  },
+  "plugins": [
+    {
+      "name": "delldisplay",
+      "source": "./plugins/delldisplay",
+      "description": "Lets Claude put this computer on a Dell monitor shared with other computers, beside what you're working on, and put it back after.",
+      "category": "productivity"
+    }
+  ]
+}

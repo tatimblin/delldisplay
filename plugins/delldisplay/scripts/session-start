@@ -1,0 +1,21 @@
+#!/bin/sh
+# SessionStart hook. Silent when `delldisplay mcp` can run; otherwise one
+# line of context saying how to install or upgrade. Always exits 0 so a
+# missing binary never blocks the session.
+
+# macOS only: elsewhere the server can't run, and there's nothing to fix.
+[ "$(uname -s)" = Darwin ] || exit 0
+
+# shellcheck source=SCRIPTDIR/find-delldisplay.sh
+. "$(dirname "$0")/find-delldisplay.sh"
+
+if ! bin=$(find_delldisplay); then
+    echo "The delldisplay plugin's display tools won't work: the delldisplay CLI isn't installed. If the user wants them, they can install it with \`brew install tatimblin/tap/delldisplay\` and restart Claude Code."
+    exit 0
+fi
+
+# Versions before the MCP server, and builds without it, have no `mcp`.
+if ! "$bin" mcp --help >/dev/null 2>&1; then
+    echo "The delldisplay plugin's display tools won't work: $bin has no \`mcp\` command (too old, or built without it). If the user wants them, they can upgrade with \`brew upgrade tatimblin/tap/delldisplay\` and restart Claude Code."
+fi
+exit 0
