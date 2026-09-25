@@ -17,4 +17,4 @@ publish = false
 fixture = []
 
 [dependencies]
-ddc-panels = { path = "../ddc-panels", version = "0.1.0" }
+ddc-panels = { path = "../ddc-panels", version = "0.1.1" }
