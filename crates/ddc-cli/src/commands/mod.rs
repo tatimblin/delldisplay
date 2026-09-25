@@ -24,6 +24,9 @@ pub fn offline(cmd: &Cmd, ctx: &Ctx) -> Option<u8> {
         Cmd::List => Some(basic::list(ctx)),
         Cmd::Codes(a) => Some(basic::codes(a, ctx)),
         Cmd::Pxp(a) => pxp::offline(a, ctx),
+        // Opens the display per tool call, not up front.
+        #[cfg(feature = "mcp")]
+        Cmd::Mcp(a) => Some(crate::mcp::run(a, ctx)),
         _ => None,
     }
 }
@@ -45,5 +48,7 @@ pub fn run<T: I2c>(cmd: &Cmd, ctx: &Ctx, d: &mut Ddc<T>) -> u8 {
         Cmd::Kvm(a) => kvm::run(d, a, ctx),
         Cmd::Map(a) => mapping::map(d, a),
         Cmd::Pipmap(a) => mapping::pipmap(d, a),
+        #[cfg(feature = "mcp")]
+        Cmd::Mcp(a) => crate::mcp::run(a, ctx),
     }
 }

@@ -53,6 +53,17 @@ impl Ctx {
     pub fn wait(&self, d: Duration) -> Duration {
         self.max_dwell.map_or(d, |cap| d.min(cap))
     }
+    /// Where state kept between runs lives: `$XDG_STATE_HOME/delldisplay`,
+    /// else `~/.local/state/delldisplay`.
+    pub fn state_dir(&self) -> PathBuf {
+        self.state_dir.clone().unwrap_or_else(|| {
+            std::env::var_os("XDG_STATE_HOME")
+                .map(PathBuf::from)
+                .or_else(|| std::env::var_os("HOME").map(|h| PathBuf::from(h).join(".local/state")))
+                .unwrap_or_else(std::env::temp_dir)
+                .join("delldisplay")
+        })
+    }
 }
 
 pub fn print_json(v: &impl Serialize) {
