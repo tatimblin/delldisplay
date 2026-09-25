@@ -1,0 +1,52 @@
+# Called by release.yml (a dist custom publish job) once the GitHub Release
+# exists. dist only packages binaries, so the C library and header are built
+# and attached here.
+name: Publish libdelldisplay
+
+on:
+  workflow_call:
+    inputs:
+      plan:
+        required: true
+        type: string
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  libdelldisplay:
+    runs-on: macos-latest
+    env:
+      TAG: ${{ fromJson(inputs.plan).announcement_tag }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+
+      - name: Build both architectures
+        run: |
+          for t in aarch64-apple-darwin x86_64-apple-darwin; do
+            cargo build --release --locked --target "$t" -p ddc-ffi
+          done
+
+      - name: Package
+        run: |
+          a=target/aarch64-apple-darwin/release
+          x=target/x86_64-apple-darwin/release
+          lib="libdelldisplay-$TAG-macos-universal"
+          mkdir -p "dist/$lib"
+          lipo -create "$a/libdelldisplay.dylib" "$x/libdelldisplay.dylib" -output "dist/$lib/libdelldisplay.dylib"
+          lipo -create "$a/libdelldisplay.a" "$x/libdelldisplay.a" -output "dist/$lib/libdelldisplay.a"
+          lipo -info "dist/$lib/libdelldisplay.dylib"
+          cp crates/ddc-ffi/include/delldisplay.h LICENSE "dist/$lib/"
+          cd dist
+          tar -czf "$lib.tar.gz" "$lib"
+          shasum -a 256 "$lib.tar.gz" > "$lib.tar.gz.sha256"
+
+      # The caller only grants this job id-token and packages, so the
+      # GITHUB_TOKEN can't write to the release.
+      - name: Upload to the release
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_PLZ_TOKEN }}
+        run: gh release upload "$TAG" dist/*.tar.gz dist/*.sha256 --clobber

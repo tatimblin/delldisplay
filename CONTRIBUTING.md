@@ -12,6 +12,23 @@ cargo fmt --all
 CI runs the same, plus `cargo doc` with warnings denied. Tests run against fake
 panels and captured frames. None of them touch real hardware.
 
+## Commits and releases
+
+PR titles follow [Conventional Commits](https://www.conventionalcommits.org)
+(`feat: ...`, `fix: ...`, `docs: ...`), with a lowercase subject; CI checks
+this. Squash-merge PRs so the title becomes the commit on `main`.
+
+Releases are automated. On every push to `main`, release-plz opens or updates a
+`chore: release vX.Y.Z` PR that bumps the shared workspace version and adds the
+`feat`, `fix`, `refactor` and `perf` commits to `CHANGELOG.md`. Merging it tags
+`vX.Y.Z`. The tag runs `release.yml`, which builds the binaries and the install
+script with [dist](https://opensource.axo.dev/cargo-dist/), creates the GitHub
+Release, attaches `libdelldisplay`, and updates the formula in
+`tatimblin/homebrew-tap`. Nothing is published to crates.io.
+
+After changing `[workspace.metadata.dist]` in `Cargo.toml`, run `dist generate`
+to regenerate `release.yml` rather than editing it by hand.
+
 ## Add a panel profile
 
 Profiles live in `crates/ddc-panels/profiles/`, one TOML file per model or
