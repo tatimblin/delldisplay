@@ -13,14 +13,35 @@ would before tapping them on the shoulder.
 ## Tools
 
 - `display_state`: read-only. The layout, what each pane shows, which input
-  is this computer, the layouts and inputs available, and whether this
-  computer has a change to put back.
+  is this computer, where the keyboard and mouse are (`usb`), the layouts
+  and inputs available, and whether this computer has a change to put back.
 - `display_arrange`: set a layout and what goes in each pane. In `panes`,
   `self` is this computer, `current` is whatever the main pane shows now,
-  anything else is an input name from `display_state`. `dry_run: true`
-  checks without writing.
-- `display_restore`: put back what this computer changed. Refuses if anyone
-  has changed the monitor since.
+  anything else is an input name from `display_state`. `usb` says where the
+  keyboard and mouse go. `dry_run: true` checks without writing.
+- `display_restore`: put back what this computer changed, keyboard and mouse
+  included. Refuses if anyone has changed the monitor since.
+
+## Keyboard and mouse
+
+The keyboard and mouse plugged into the monitor go wherever its USB goes.
+A screen the user can't type on is no use to them, and a keyboard taken
+away while they only needed to look is an interruption. Pick `usb` for what
+the user will do next:
+
+| The user will | Example | `usb` |
+|---|---|---|
+| Look at something here | a graph, a secret, a build result in picture-in-picture or a split | leave it out (`auto`) |
+| Type or click here | answer a question, sign in, approve something | `self` |
+| Go back to another computer | hand the screen to the input they asked for | leave it out (`auto`) |
+| Keep typing where they are, whatever the screen shows | they said so | `stay` |
+
+`auto` moves them only when this change leaves the computer holding them off
+screen, or leaves only this computer on screen. `away` hands them to the
+monitor's next computer, which is the other one when two share it. At full
+screen the monitor only moves them with its main input, so a request there
+may not be honoured. The reply says where they really went and why, under
+`usb`; tell the user if that isn't where they need them.
 
 ## Etiquette
 
@@ -47,5 +68,5 @@ looking at. A background agent needs the tools allowed up front:
 `mcp__plugin_delldisplay_delldisplay__*` in `permissions.allow`. If a call
 is denied, say so in the result rather than asking again.
 
-The server's own rules (takeover, cooldown, notifications) are set in
+The server's own rules (takeover, cooldown, notifications, moving USB) are set in
 `~/.config/delldisplay/mcp.toml`. Leave that file to the user.

@@ -2,8 +2,8 @@
 //!
 //! Everything lives under `<state dir>/mcp/`:
 //!
-//! - `<monitor>.json`: the view to put back, the last write time and the last
-//!   input this computer was seen on. Written whole to a temp file and renamed.
+//! - `<monitor>.json`: the view and USB side to put back, the last write time
+//!   and the last input this computer was seen on. Written whole to a temp file and renamed.
 //! - `lock`: held for a whole tool call, so two servers on one Mac (two agent
 //!   sessions) take turns instead of interleaving I2C frames.
 //! - `log.jsonl`: one line per change, refusal or failure.
@@ -55,6 +55,12 @@ pub struct Saved {
     pub reason: String,
     /// Unix seconds.
     pub at: u64,
+    /// Whether USB was on this computer before the first change, when known.
+    #[serde(default)]
+    pub usb_before: Option<bool>,
+    /// Whether USB was on this computer after the latest change, when known.
+    #[serde(default)]
+    pub usb_after: Option<bool>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default, PartialEq)]
@@ -192,6 +198,8 @@ mod tests {
                 },
                 reason: String::from("tests"),
                 at: 10,
+                usb_before: Some(true),
+                usb_after: Some(false),
             }),
             caps: Some(String::from("(vcp(10 60))")),
         };

@@ -115,8 +115,22 @@ Any MCP client works the same way: the command is `delldisplay mcp`.
   this computer (the monitor reports which port each request arrives on).
 - `display_arrange` picks a layout and what goes where, e.g. `side-by-side`
   with `{"right": "self"}`. It takes a `reason`, shown as a macOS notification.
-- `display_restore` puts back what this computer changed, and refuses if anyone
-  has changed the monitor since.
+- `display_restore` puts back what this computer changed, keyboard and mouse
+  included, and refuses if anyone has changed the monitor since.
+
+A keyboard and mouse plugged into the monitor go wherever its USB goes, so
+the server moves them with the screen when the user will need them there.
+By default (`usb: auto`) they follow the user: when a change takes the
+computer holding them off screen they go with what's showing, when it leaves
+only this computer on screen they come here, and a picture-in-picture or
+split that's only there to be looked at leaves them alone. An agent passes
+`usb: self` when it needs the user to type on this computer, `away` or
+`stay` to say otherwise. The monitor also moves USB by itself when its main
+input changes, so the server watches for that and only switches when USB
+isn't where it should be. It switches through the KVM toggle, as `kvm
+ensure` does, which the U4323QE only takes with picture-in-picture or a split
+up (at full screen it shows a message instead), so leaving a split for full
+screen switches first. With more than two computers "away" means the next one.
 
 The agent's permission prompts appear on the computer that's running it, which
 may not be the one you're looking at, so the server enforces its own rules
@@ -132,6 +146,7 @@ the tools allowed up front in Claude Code's `permissions.allow`:
 allow_takeover = false   # true lets an agent replace what's on screen
 cooldown_seconds = 10
 notify = true
+move_usb = true          # false leaves the keyboard and mouse where they are
 # self_input = "dp2"     # only if the monitor doesn't report it
 # display = 0
 ```

@@ -358,7 +358,7 @@ fn show_usb(n: usize, here: bool, ctx: &Ctx) -> u8 {
 }
 
 /// `(hub devices, attached here)` from this host's USB tree.
-fn hub() -> Result<(usize, bool), String> {
+pub(crate) fn hub() -> Result<(usize, bool), String> {
     #[cfg(target_os = "macos")]
     return Ok(ddc_transport::macos::usb_here());
     #[cfg(not(target_os = "macos"))]
@@ -369,75 +369,83 @@ fn hub() -> Result<(usize, bool), String> {
 }
 
 /// How often, and how many times, to recount the hub after a toggle.
-const USB_POLL: Duration = Duration::from_millis(700);
+pub(crate) const USB_POLL: Duration = Duration::from_millis(700);
 const USB_TRIES: u32 = 12;
 
 /// Toggle USB, then wait for the hub to move. `want` is `Some(here)` for
 /// `ensure`, which does nothing when USB is already on that side.
 fn flip<T: I2c>(d: &mut Ddc<T>, snap: &Snapshot, want: Option<bool>, w: &Write, ctx: &Ctx) -> u8 {
-    let (before, here) = match hub() {
+    let before = match hub() {
         Ok(h) => h,
         Err(e) => return exec::fail(ctx, &e),
     };
-    if want == Some(here) {
+    if want == Some(before.1) {
         if ctx.json {
             print_json(
-                &json!({ "ok": true, "changed": false, "usb_here": here, "hub_devices": before }),
+                &json!({ "ok": true, "changed": false, "usb_here": before.1, "hub_devices": before.0 }),
             );
         } else {
-            println!("usb already {}", if here { "here" } else { "away" });
+            println!("usb already {}", if before.1 { "here" } else { "away" });
         }
         return exit::OK;
     }
-    let mut runner = ctx.runner(d, w);
+    let pause = ctx.wait(USB_POLL);
+    toggle_and_wait(&mut ctx.runner(d, w), snap, before, want, &hub, pause).print(ctx)
+}
+
+/// Write the toggle, then recount the hub until it moves, or has moved to
+/// `want` (`Some(here)`). `before` is the count and side read just before.
+/// A report that isn't ok means USB didn't end up where it was asked to.
+pub(crate) fn toggle_and_wait<T: I2c>(
+    runner: &mut Runner<'_, T>,
+    snap: &Snapshot,
+    before: (usize, bool),
+    want: Option<bool>,
+    hub: &dyn Fn() -> Result<(usize, bool), String>,
+    pause: Duration,
+) -> exec::Report {
+    let dry_run = runner.is_dry_run();
     let plan = kvm::toggle_plan();
-    let (mut report, out) = exec::guarded(
-        &mut runner,
-        snap,
-        Some(&Intent::KvmToggle),
-        &plan,
-        vec![],
-        1,
-    );
-    if out.is_some_and(|o| o.ok()) && !w.dry_run {
-        let pause = ctx.wait(USB_POLL);
-        let done = |n: usize| match want {
-            Some(side) => (n >= 3) == side,
-            None => n != before,
+    let (mut report, out) = exec::guarded(runner, snap, Some(&Intent::KvmToggle), &plan, vec![], 1);
+    if out.is_some_and(|o| o.ok()) && !dry_run {
+        let done = |h: (usize, bool)| match want {
+            Some(side) => h.1 == side,
+            None => h.0 != before.0,
         };
-        let (after, _) = wait_until(|| hub().map_or(0, |h| h.0), done, USB_TRIES, pause);
-        let here = hub().is_ok_and(|h| h.1);
+        let (after, _) = wait_until(|| hub().unwrap_or((0, false)), done, USB_TRIES, pause);
         report.notes.push(format!(
-            "hub devices {before} -> {after}; usb is {}",
-            if here { "here" } else { "away" }
+            "hub devices {} -> {}; usb is {}",
+            before.0,
+            after.0,
+            if after.1 { "here" } else { "away" }
         ));
-        report.extra.insert("usb_here".into(), here.into());
-        report.extra.insert("hub_devices".into(), after.into());
-        if want.is_some_and(|side| side != here) {
+        report.extra.insert("usb_here".into(), after.1.into());
+        report.extra.insert("hub_devices".into(), after.0.into());
+        if want.is_some_and(|side| side != after.1) {
             report.ok = false;
             report.failure = Some(String::from("usb didn't end up on the requested side"));
         }
     }
-    report.print(ctx)
+    report
 }
 
-/// Poll `count` up to `tries` times, `pause` apart, until `done` holds.
-/// Returns the last count and how many polls it took.
-fn wait_until(
-    mut count: impl FnMut() -> usize,
-    done: impl Fn(usize) -> bool,
+/// Poll `read` up to `tries` times, `pause` apart, until `done` holds.
+/// Returns the last reading and how many polls it took.
+fn wait_until<V: Copy + Default>(
+    mut read: impl FnMut() -> V,
+    done: impl Fn(V) -> bool,
     tries: u32,
     pause: Duration,
-) -> (usize, u32) {
-    let mut n = 0;
+) -> (V, u32) {
+    let mut v = V::default();
     for i in 1..=tries {
         std::thread::sleep(pause);
-        n = count();
-        if done(n) {
-            return (n, i);
+        v = read();
+        if done(v) {
+            return (v, i);
         }
     }
-    (n, tries)
+    (v, tries)
 }
 
 #[cfg(test)]
