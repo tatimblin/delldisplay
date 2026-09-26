@@ -29,6 +29,7 @@ struct File {
     allow_takeover: bool,
     cooldown_seconds: u64,
     notify: bool,
+    move_usb: bool,
 }
 
 impl Default for File {
@@ -40,6 +41,7 @@ impl Default for File {
             allow_takeover: c.allow_takeover,
             cooldown_seconds: c.cooldown_seconds,
             notify: c.notify,
+            move_usb: c.move_usb,
         }
     }
 }
@@ -56,6 +58,9 @@ pub struct Config {
     pub cooldown_seconds: u64,
     /// Show the `reason` as a macOS notification after a change.
     pub notify: bool,
+    /// Move the monitor's USB hub, and the keyboard and mouse on it, along
+    /// with the screen.
+    pub move_usb: bool,
 }
 
 impl Default for Config {
@@ -66,6 +71,7 @@ impl Default for Config {
             allow_takeover: false,
             cooldown_seconds: 10,
             notify: true,
+            move_usb: true,
         }
     }
 }
@@ -92,6 +98,7 @@ impl Config {
             allow_takeover: f.allow_takeover,
             cooldown_seconds: f.cooldown_seconds,
             notify: f.notify,
+            move_usb: f.move_usb,
         })
     }
 }
@@ -111,7 +118,7 @@ mod tests {
     fn every_key_parses() {
         let c = Config::parse(
             "display = 1\nself_input = \"dp2\"\nallow_takeover = true\n\
-             cooldown_seconds = 0\nnotify = false\n",
+             cooldown_seconds = 0\nnotify = false\nmove_usb = false\n",
         )
         .unwrap();
         assert_eq!(
@@ -122,6 +129,7 @@ mod tests {
                 allow_takeover: true,
                 cooldown_seconds: 0,
                 notify: false,
+                move_usb: false,
             }
         );
         assert_eq!(

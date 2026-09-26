@@ -1,8 +1,9 @@
 //! `delldisplay mcp`: the display as MCP tools, over stdio, for AI agents.
 //!
 //! Three tools: `display_state` reads, `display_arrange` changes the layout
-//! and what each pane shows, `display_restore` takes this computer's change
-//! back. Each call opens the display, takes the lock in [`store`], runs a
+//! and what each pane shows, moving the monitor's USB hub (and the keyboard
+//! and mouse on it) when the user's attention moves with the screen, and
+//! `display_restore` takes this computer's change back, USB included. Each call opens the display, takes the lock in [`store`], runs a
 //! function from [`tools`] on a blocking thread, and closes the display
 //! again: a session held for hours goes stale across layout changes and
 //! sleep.
@@ -41,7 +42,7 @@ Point an agent at `delldisplay mcp`. For Claude Code:
   claude mcp add delldisplay -- delldisplay mcp
 
 The config file sets what the server may do on its own: allow_takeover,
-cooldown_seconds, notify, self_input, display. It's optional.")]
+cooldown_seconds, notify, move_usb, self_input, display. It's optional.")]
 pub struct Args {
     /// Config file [default: $DELLDISPLAY_MCP_CONFIG, else ~/.config/delldisplay/mcp.toml]
     #[arg(long, value_name = "PATH")]
@@ -53,7 +54,10 @@ Controls a Dell monitor that several computers share. The user may be looking \
 at it right now, working on another computer. Change it only when showing the \
 user something on this computer is worth interrupting them for. Prefer adding \
 this computer beside what they're working on over replacing it, and put the \
-monitor back with display_restore when they're done with it.";
+monitor back with display_restore when they're done with it. The keyboard and \
+mouse plugged into the monitor go wherever its USB goes: the server moves them \
+with the screen when the user will need them, and leaves them alone when \
+you're only showing something.";
 
 pub fn run(a: &Args, ctx: &Ctx) -> u8 {
     let path = a
@@ -154,6 +158,7 @@ impl<T: I2c + 'static> Server<T> {
                 max_dwell,
                 notify: &notify,
                 client,
+                usb: &crate::commands::kvm::hub,
             };
             match name.as_str() {
                 "display_state" => tools::state(&mut d, &call),
@@ -196,7 +201,8 @@ fn definitions(cfg: &Config) -> Vec<Tool> {
     let state = Tool::new(
         "display_state",
         "Read what the shared monitor shows right now: the layout, which input fills each \
-         pane, and which input is this computer. Also lists the layouts and inputs this \
+         pane, which input is this computer, and where the keyboard and mouse on the \
+         monitor's USB are (`usb`: self, away or unknown). Also lists the layouts and inputs this \
          monitor has, and whether there's a change of this computer's to put back. \
          Read-only; takes about a second. Other computers and the monitor's own buttons \
          can change it at any time, so read it before arranging and after a refusal.",
@@ -204,6 +210,21 @@ fn definitions(cfg: &Config) -> Vec<Tool> {
     )
     .with_title("Read the shared monitor")
     .with_annotations(ToolAnnotations::new().read_only(true).open_world(false));
+    let usb = if cfg.move_usb {
+        "The keyboard and mouse plugged into the monitor go wherever its USB goes. By \
+         default (`usb: auto`) they follow the user: if the computer holding them leaves \
+         the screen they move to what's showing, if only this computer is left on screen \
+         they come here, and otherwise they stay put, so a picture-in-picture or split \
+         for the user to look at never takes their keyboard. Pass `usb: self` when the \
+         user needs to type or click on this computer (answering a question, signing in), \
+         `usb: away` to hand them to what else is on screen, `usb: stay` to leave them \
+         alone. The monitor only switches USB with picture-in-picture or a split up; at \
+         full screen USB follows its main input, so there `usb` can only be honoured \
+         when the main input changes, and the reply's `usb` says where it really went."
+    } else {
+        "The keyboard and mouse plugged into the monitor stay where they are: move_usb is \
+         off in mcp.toml."
+    };
     let arrange = Tool::new(
         "display_arrange",
         format!(
@@ -212,8 +233,8 @@ fn definitions(cfg: &Config) -> Vec<Tool> {
              something beside what they're working on. The user sees it at once. In `panes`, \
              `self` is this computer, `current` is whatever the main pane shows now, and \
              anything else is an input name from display_state. Positions left out keep \
-             their source. {takeover} `reason` is shown to the user as a notification and \
-             logged, so write it for them (\"Showing the test results you asked for\"). \
+             their source. {takeover} {usb} `reason` is shown to the user as a notification \
+             and logged, so write it for them (\"Showing the test results you asked for\"). \
              Giving this computer a pane of a different size changes its resolution, so its \
              windows may move and its screen may blank for a second. `dry_run` checks \
              without writing. Call display_restore when the user is done."
@@ -235,6 +256,15 @@ fn definitions(cfg: &Config) -> Vec<Tool> {
                                     main/inset for pip-small.",
                     "additionalProperties": { "type": "string" },
                 },
+                "usb": {
+                    "type": "string",
+                    "enum": ["auto", "self", "away", "stay"],
+                    "default": "auto",
+                    "description": "Where the keyboard and mouse go. auto follows the \
+                                    user; self when they'll type or click on this \
+                                    computer; away to what else is on screen; stay to \
+                                    leave them.",
+                },
                 "reason": { "type": "string", "minLength": 3, "maxLength": 200 },
                 "dry_run": { "type": "boolean", "default": false },
             },
@@ -250,9 +280,11 @@ fn definitions(cfg: &Config) -> Vec<Tool> {
     );
     let restore = Tool::new(
         "display_restore",
-        "Put the shared monitor back the way it was before this computer changed it. Refuses, \
-         and writes nothing, if anyone has changed the monitor since, so it never undoes \
-         someone else's change. `dry_run` checks without writing.",
+        "Put the shared monitor back the way it was before this computer changed it, the \
+         keyboard and mouse included. Refuses, and writes nothing, if anyone has changed \
+         the monitor since, so it never undoes someone else's change; if only the keyboard \
+         and mouse were moved since, the screen goes back and they stay where they are. \
+         `dry_run` checks without writing.",
         schema(json!({
             "type": "object",
             "additionalProperties": false,
@@ -291,6 +323,13 @@ fn result(reply: Reply) -> CallToolResult {
                 .pointer("/report/failure")
                 .and_then(Value::as_str)
                 .map(|f| format!("failed: {f}")),
+        )
+        .chain(
+            reply
+                .body
+                .pointer("/usb/error")
+                .and_then(Value::as_str)
+                .map(|f| format!("keyboard and mouse: {f}")),
         )
         .collect();
     let mut r = CallToolResult::error(vec![
