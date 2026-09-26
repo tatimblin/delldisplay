@@ -161,7 +161,7 @@ checksum = "773648b94d0e5d620f64f280777445740e61fe701025087ec8b57f45c791888b"
 
 [[package]]
 name = "ddc-cli"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "clap",
  "ddc-core",
@@ -175,14 +175,14 @@ dependencies = [
 
 [[package]]
 name = "ddc-core"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "ddc-panels",
 ]
 
 [[package]]
 name = "ddc-ffi"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "ddc-core",
  "ddc-transport",
@@ -190,7 +190,7 @@ dependencies = [
 
 [[package]]
 name = "ddc-panels"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "serde",
  "toml",
@@ -198,7 +198,7 @@ dependencies = [
 
 [[package]]
 name = "ddc-transport"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "ddc-core",
 ]

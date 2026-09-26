@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.1.2](https://github.com/tatimblin/delldisplay/compare/v0.1.1...v0.1.2) - 2026-09-26
+
+### Added
+
+- move the keyboard and mouse with the screen in delldisplay mcp ([#6](https://github.com/tatimblin/delldisplay/pull/6))
+
 ## [0.1.1](https://github.com/tatimblin/delldisplay/compare/v0.1.0...v0.1.1) - 2026-09-25
 
 ### Added
